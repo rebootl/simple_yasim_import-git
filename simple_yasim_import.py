@@ -4,9 +4,9 @@
 Loads and visualizes YASim FMD geometry.
 '''
 #--------------------------------------------------------------------------------
-# Port for Blender 2.5/6:
+# Port for Blender 2.5/6/7:
 #
-# Copyright 2012, 2013 Cem Aydin
+# Copyright 2012-2015 Cem Aydin
 #
 # E-Mail: cem.aydin@gmx.ch
 #--------------------------------------------------------------------------------
@@ -36,8 +36,8 @@ Loads and visualizes YASim FMD geometry.
 bl_info = {
     'name': 'Simple YASim XML Import',
     'author': 'Cem Aydin',
-    'version': (0, 0, 5),
-    'blender': (2, 68, 0),
+    'version': (0, 0, 6),
+    'blender': (2, 73, 0),
     'api': 'unknown',
     "location": "View3D > UI panel > YASim XML Importer",
     'description': 'Loads and visualizes YASim FDM geometry',
@@ -295,6 +295,10 @@ def draw_arrow(mesh, start, end):
     # "base"
     bm.verts.new(((ORIGIN + 0.1 * Y)))
     bm.verts.new(((ORIGIN - 0.1 * Y)))
+
+    # use before accessing bm.verts[] with blender 2.73
+    if hasattr(bm.verts, "ensure_lookup_table"):
+        bm.verts.ensure_lookup_table()
     
     # edges
     bm.edges.new([bm.verts[n], bm.verts[n + 1]])
@@ -325,6 +329,11 @@ def draw_circle(mesh, numpoints, radius, matrix):
         angle = 2.0 * math.pi * i / numpoints
         v = Vector((radius * math.cos(angle), radius * math.sin(angle), 0))
         bm.verts.new((v * matrix))
+
+    # use before accessing bm.verts[] with blender 2.73
+    if hasattr(bm.verts, "ensure_lookup_table"):
+        bm.verts.ensure_lookup_table()
+    
     # make the edges
     for i in range(numpoints):
         i1 = (i + 1) % numpoints
@@ -354,6 +363,9 @@ def draw_dashed_line(mesh, start, end):
             b = end
         bm.verts.new(a)
         bm.verts.new(b)
+        # use before accessing bm.verts[] with blender 2.73
+        if hasattr(bm.verts, "ensure_lookup_table"):
+            bm.verts.ensure_lookup_table()
         bm.edges.new([bm.verts[n + 2 * i], bm.verts[n + 2 * i + 1]])
         
     # write the bmesh back to the mesh
@@ -416,7 +428,6 @@ class Cockpit(Item):
         bpy.context.object.name = 'YASim_Cockpit'
         # set material, attr: Name, colorsRGB, alpha value
         Item.set_material('red', (1,0,0), 1)
-        
         
 
 class Tank(Item):
@@ -725,6 +736,11 @@ class Fuselage(Item):
             bm.verts.new((midpoint * length, 0.5 * width * angle[i][0], 0.5 * width * angle[i][1]))
         for i in range(numvert):
             bm.verts.new((length, 0.5 * width * taper * angle[i][0], 0.5 * width * taper * angle[i][1]))
+            
+        # use before accessing bm.verts[] with blender 2.73
+        if hasattr(bm.verts, "ensure_lookup_table"):
+            bm.verts.ensure_lookup_table()
+        
         for i in range(numvert):
             i1 = (i + 1) % numvert
             bm.faces.new([bm.verts[i], bm.verts[i1], bm.verts[i1 + numvert], bm.verts[i + numvert]])
