@@ -788,17 +788,26 @@ class Rotor(Item):
         # reworking the rotor element
         
         # mr_no's suggestion for the workflow
-        
+        #
         # 1) draw circles ((x,y,z), diameter, rel-len-blade-start)
         # 2) draw vector forward ((x,y,z,),(fx,fy,fz))
         # 3) draw blade (diameter, chord)
         # 4) draw vector rotation direction (ccw)
         # 5) draw vector normal with nx=0, ny=0, nz=1
         # 6) rotate the hole mesh with real n
-        
+        #
         ## draw blade same direction vector forward is
         ## use taper for drawing more accurate blade
         ## don't use twist, don't use phi0, ignore all other smaller values
+        
+        # currently we're drawing it the following way:
+        # <rotor> One blade is shown, where the initial angle phi0 is ignored.
+        # The incidence is shown at the blade root, where chord is simply used for
+        # the length. The blade tip is always flat (at a zero degree incidence).
+        # When ccw = 0 the incidence angle is currently inverted.
+        # However, it is unclear wheter this is correct (?).
+        # The entire rotor is rotated according to the normal vector (pointing "up").
+        # Finally the forward vector is drawn, as it is defined.
         
         # drawing the blade first, this is easier, we can create the mesh with that
         
@@ -808,11 +817,9 @@ class Rotor(Item):
         b = ORIGIN + radius * X
         
         # adapted root line, twist is negative and taper should not be included here !
-        
         tw = 0.5 * chord * math.cos(twist) * Y + 0.5 * chord * math.sin(-twist) * Z
         
         # drawing the blade for ccw = 1
-        
         rot_obj = mesh_create(name, center, [ORIGIN, a, b, a + tw, a - tw, b + 0.5 * chord * Y * taper, 
                                 b - 0.5 * chord * Y * taper],
                                 [(0,1), (1,2), (1,3), (1,4), (3,5), (4,6), (5,6)], [])
@@ -820,12 +827,10 @@ class Rotor(Item):
         # get the mesh
         mesh = rot_obj.data
         
-        # draw ccw = 1
-        
+        # draw ccw = 1 arrow
         draw_arrow(mesh, ((a+b)/2), Y)
         
         # transform the blade + ccw arrow according to real ccw
-        
         if ccw == 0:
             # invert the Y axis
             tm = ([1,0,0,0],[0,-1,0,0],[0,0,1,0],[0,0,0,1])
@@ -834,78 +839,27 @@ class Rotor(Item):
         # (and rotate it around phi0, could be added here ?)
         
         # draw the normal arrow up the Z
+        draw_arrow(mesh, ORIGIN, Z)
         
+        # draw the circles
+        draw_circle(mesh, 64, rel_len_blade_start * radius, Matrix())
+        draw_circle(mesh, 128, radius, Matrix())
+        
+        # rotate everything with real n (up)
         # (define the matrix here)
         q1 = up.to_track_quat('Z', 'X')
         m1 = q1.to_matrix()
         m = m1.to_4x4()
         
-        #c = m.copy()
-        #invert = c.inverted()
-        
-        draw_arrow(mesh, ORIGIN, Z)
-        
-        # draw the forward arrow (how it's defined)
-        
-        #draw_arrow(mesh, ORIGIN, fwd)
-        
-        # draw the circles
-        
-        draw_circle(mesh, 64, rel_len_blade_start * radius, Matrix())
-        draw_circle(mesh, 128, radius, Matrix())
-        
-        # rotate everything with real n (up)
-        
         mesh.transform(m)
         
         # draw the forward arrow (how it's defined)
-        
         draw_arrow(mesh, ORIGIN, fwd)
         
-#        q1 = up.to_track_quat('Z', 'X')
-#        m1 = q1.to_matrix()
-#        m = m1.to_4x4()
-#        
-#        matrix = Matrix.Rotation(phi0, 4, 'Z') * m
-#        c = matrix.copy()
-#        invert = c.inverted()
-#        direction = [-1, 1][ccw]
-#        
-#        twist *= DEG2RAD
-#        
-#        a = ORIGIN + rel_len_blade_start * radius * X
-#        b = ORIGIN + radius * X
-#        
-#        tw = 0.5 * chord * taper * math.cos(twist) * Y + 0.5 * direction * chord * taper * math.sin(twist) * Z
-#        
-#        # create a new mesh, filled with one blade !
-#        rot_obj = mesh_create(name, ORIGIN, [ORIGIN, a, b, (a + 0.5 * chord * Y), (a - 0.5 * chord * Y), (b + tw), (b - tw)],
-#                    [(0,1), (1,2), (1,3), (1,4), (3,5), (4,6), (5,6)], [])
-#        
-#        # set the created object active !!!!!!!
-#        bpy.context.scene.objects.active = rot_obj
-#        
-#       # get the active mesh
-#        mesh = bpy.context.object.data
-#        
-#        # draw blade circles
-#        draw_circle(mesh, 64, rel_len_blade_start * radius, Matrix())
-#        draw_circle(mesh, 128, radius, Matrix())
-#        
-#        # draw normal and forward arrows
-#        draw_arrow(mesh, ORIGIN, up * invert)
-#        draw_arrow(mesh, ORIGIN, fwd * invert)
-#        
-#        b += 0.1 * X + direction * chord * Y
-#        draw_arrow(mesh, b, b + min(0.5 * radius, 1) * direction * Y)
-#        
-#        rot_obj.matrix_world = Matrix.Translation(center) * matrix
-        
-        # getting inconsistent results for the vector arrows ==> since I don't know the exact meaning of the things:
-        # ==> ask in the forum: what vectors would be useful for heli designers and how they are defined in the xml
-        
+        # set the created object active !!!!!!!
+        bpy.context.scene.objects.active = rot_obj
         # set material
-        #Item.set_material('grey4', (0.3,0.3,0.3), 1)
+        Item.set_material('grey4', (0.3,0.3,0.3), 1)
         
 
 # finally, the wings
