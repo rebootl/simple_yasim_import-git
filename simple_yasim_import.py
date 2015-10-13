@@ -391,7 +391,7 @@ class Item():
             mat = bpy.data.materials.new(name)
             mat.diffuse_color = color
             mat.alpha = alpha
-            #mat.use_transparency = True
+            mat.use_transparency = True
             
             bpy.context.object.data.materials.append(mat)
         
