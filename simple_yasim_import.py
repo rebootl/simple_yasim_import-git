@@ -42,7 +42,7 @@ bl_info = {
     "location": "View3D > UI panel > YASim XML Importer",
     'description': 'Loads and visualizes YASim FDM geometry',
     'warning': 'Experimental. May cause blender crashes or other unexpected behaviour.',
-    'wiki_url': 'http://www.flightgear.org/forums/viewtopic.php?f=4&t=17267',
+    'wiki_url': 'http://wiki.flightgear.org/Blender_YASim_import',
     'tracker_url': 'http://www.flightgear.org/forums/viewtopic.php?f=4&t=17267',
     'category': 'Import-Export'}
 
