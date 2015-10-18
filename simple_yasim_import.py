@@ -36,8 +36,8 @@ Loads and visualizes YASim FMD geometry.
 bl_info = {
     'name': 'Simple YASim XML Import',
     'author': 'Cem Aydin',
-    'version': (0, 6, 0),
-    'blender': (2, 73, 0),
+    'version': (0, 6, 1),
+    'blender': (2, 76, 0),
     'api': 'unknown',
     "location": "View3D > UI panel > YASim XML Importer",
     'description': 'Loads and visualizes YASim FDM geometry',
@@ -121,6 +121,24 @@ def clear_item_names():
             
             bpy.data.objects[name].show_name = False
             
+
+### Lock Transformations
+def lock_transformations(lock=True):
+    '''Lock Transformations.
+True or False.'''
+    for obj_name in bpy.data.objects.keys():
+        if obj_name.startswith("YASim_"):
+            obj = bpy.data.objects[obj_name]
+            if lock:
+                set_list = [True, True, True]
+            elif not lock:
+                set_list = [False, False, False]
+            else:
+                print("Something went wrong.")
+                return
+            obj.lock_location = set_list
+            obj.lock_rotation = set_list
+            obj.lock_scale = set_list
 
 ### Mirror / Unmirror function for symetrical elements
 
@@ -406,10 +424,12 @@ class Item():
             bpy.context.object.show_name = True
         
         # lock the transformations
-        bpy.context.object.lock_location = [True, True, True]
-        bpy.context.object.lock_rotation = [True, True, True]
-        bpy.context.object.lock_scale = [True, True, True]
-        
+        if bpy.context.scene.lock_transformations == True:
+            set_list = [True, True, True]
+            bpy.context.object.lock_location = set_list
+            bpy.context.object.lock_rotation = set_list
+            bpy.context.object.lock_scale = set_list
+
 
 # One class per item
 class Cockpit(Item):
@@ -1195,6 +1215,8 @@ class UIPanel(bpy.types.Panel):
         
         layout.prop(scene, "show_names")
         
+        layout.prop(scene, "lock_transformations")
+        
         #row = layout.row(align=True)                # using enum property instead
         #row.operator("yasim_xml.mirror")
         #row.operator("yasim_xml.unmirror")
@@ -1272,41 +1294,6 @@ class OBJECT_OT_ClearYASimButton(bpy.types.Operator):
         
         return {'FINISHED'}
 
-## BUTTON (Mirror) ==> using enum property instead, below
-#
-#class OBJECT_OT_MirrorYASimButton(bpy.types.Operator):
-#    '''Add a mirror modifier to the symetrical elements. Object centers are moved to xyz center.'''
-#    bl_idname = "yasim_xml.mirror"
-#    bl_label = "Mirror"
-#    
-#    def execute(self, context):
-#        
-#        ## Call the MIRROR func here
-#        
-#        # make a check if elements were loaded, necessary ?
-#        # check if mirror wasn't enabled already ==> checks are, for some reason, 
-#        #  not working here, doing this in the mirror func itself,
-#        #  that might be the correct way to do it anyways... ???
-#        mirror_sym(Symetric.obj_list)
-#        
-#        return {'FINISHED'}
-#    
-#
-## BUTTON (UnMirror)
-#
-#class OBJECT_OT_UnMirrorYASimButton(bpy.types.Operator):
-#    '''Remove the mirror modifier and restore the objects centers !'''
-#    bl_idname = "yasim_xml.unmirror"
-#    bl_label = "Unmirror"
-#    
-#    def execute(self, context):
-#        
-#        ## Call the MIRROR func here
-#        
-#        # make a check if elements were loaded, necessary ?
-#        unmirror_sym(Symetric.obj_list)
-#        
-#        return {'FINISHED'}
 
 ## BUTTONS Mirror
 
@@ -1380,6 +1367,19 @@ def show_names_update(self, context):
 
 bpy.types.Scene.show_names = BoolProperty(name="Show Item Names", description="Show YASim_* item names in the viewport.",
                                             default=True, update=show_names_update)
+
+
+# lock transformations checkbox control
+def lock_transformations_update(self, context):
+
+    setting = self.lock_transformations
+    if setting == True:
+        lock_transformations(True)
+    elif setting == False:
+        lock_transformations(False)
+
+bpy.types.Scene.lock_transformations = BoolProperty(name="Lock Location/Rotation", description="Lock YASim_* item tranformations.",
+                                                    default=True, update=lock_transformations_update)
 
 
 ### Registration (necessary to show up buttons etc.)
