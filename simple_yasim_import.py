@@ -952,8 +952,11 @@ class Wing(Item, Symetric):
         
         # write out the vars for the flaps
         self.baseaft = baseaft
+        self.basefore = basefore
         self.tipaft = tipaft
+        self.tipfore = tipfore
         self.base = base
+        self.tip = tip
         self.wing_obj = wing_obj
         self.mesh_matrix = m
         
@@ -986,9 +989,66 @@ class Wing(Item, Symetric):
         
         if self.is_symetric:
             Symetric.list_append(flap_obj)
+
+    def add_slat(self, name, start, end):
+        # read in the vars from wing
+        a = self.basefore
+        b = self.tipfore
+        c = 0.2 * (self.base - a).normalized()
         
+        i0 = a + start * (b - a)
+        i1 = a + end * (b - a)
+        
+        slat_obj = mesh_create(name, ORIGIN, [i0, i1, (i0 + c), (i1 + c)], [], [(0, 1, 3, 2)])
+        
+        # get the wing obj matrix
+        m = self.wing_obj.matrix_world
+        
+        # apply it to the slat_obj + the "wing mesh matrix" from above to get the rotations
+        # separating mesh matrix out, getting incorrect mirrors
+        mesh = slat_obj.data
+        mesh.transform(self.mesh_matrix)
+        
+        slat_obj.matrix_world = m
+        
+        # set the created object active !!!!!!!
+        bpy.context.scene.objects.active = slat_obj
+        
+        # set material
+        Item.set_material('tyello-1', (0.8,0.8,0.0), 0.9)
+        
+        if self.is_symetric:
+            Symetric.list_append(slat_obj)
 
-
+    def add_spoiler(self, name, start, end):
+        # read in the vars from wing
+        a = self.base
+        b = self.tip
+        c = 0.2 * (self.baseaft - a).normalized()
+        
+        i0 = a + start * (b - a)
+        i1 = a + end * (b - a)
+        
+        spoiler_obj = mesh_create(name, ORIGIN, [i0, i1, (i0 + c), (i1 + c)], [], [(0, 1, 3, 2)])
+        
+        # get the wing obj matrix
+        m = self.wing_obj.matrix_world
+        
+        # apply it to the spoiler_obj + the "wing mesh matrix" from above to get the rotations
+        # separating mesh matrix out, getting incorrect mirrors
+        mesh = spoiler_obj.data
+        mesh.transform(self.mesh_matrix)
+        
+        spoiler_obj.matrix_world = m
+        
+        # set the created object active !!!!!!!
+        bpy.context.scene.objects.active = spoiler_obj
+        
+        # set material
+        Item.set_material('tyello-1', (0.8,0.8,0.0), 0.9)
+        
+        if self.is_symetric:
+            Symetric.list_append(spoiler_obj)
 
 ### This is the parser handling function
 ### It tells the parser what to do with the XML
@@ -1152,10 +1212,20 @@ class Read_XML(handler.ContentHandler):
             
             item = Wing("YASim_{:s}_{:d}".format(name, self.counter[name]), root, length, chord, incidence, twist, taper, sweep, dihedral)
             
-        elif name == "flap0" or name == "flap1" or name == "slat" or name == "spoiler":
+        elif name == "flap0" or name == "flap1":
             start = float(attrs.get("start"))
             end = float(attrs.get("end"))
             parent.add_flap("YASim_{:s}_{:d}".format(name, self.counter[name]), start, end)
+        
+        elif name == "slat":
+            start = float(attrs.get("start"))
+            end = float(attrs.get("end"))
+            parent.add_slat("YASim_{:s}_{:d}".format(name, self.counter[name]), start, end)
+        
+        elif name == "spoiler":
+            start = float(attrs.get("start"))
+            end = float(attrs.get("end"))
+            parent.add_spoiler("YASim_{:s}_{:d}".format(name, self.counter[name]), start, end)
         
         
         # appending item to list
