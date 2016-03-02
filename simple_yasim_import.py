@@ -964,7 +964,7 @@ class Wing(Item, Symetric):
         # read in the vars from wing
         a = self.baseaft
         b = self.tipaft
-        c = 0.1 * (self.base - a)
+        c = 0.15 * (self.base - a)
         
         i0 = a + start * (b - a)
         i1 = a + end * (b - a)
@@ -994,7 +994,7 @@ class Wing(Item, Symetric):
         # read in the vars from wing
         a = self.basefore
         b = self.tipfore
-        c = 0.1 * (self.base - a)
+        c = 0.15 * (self.base - a)
         
         i0 = a + start * (b - a)
         i1 = a + end * (b - a)
@@ -1024,7 +1024,7 @@ class Wing(Item, Symetric):
         # read in the vars from wing
         a = self.base
         b = self.tip
-        c = 0.1 * (self.baseaft - a)
+        c = 0.15 * (self.baseaft - a)
         
         i0 = a + start * (b - a)
         i1 = a + end * (b - a)
