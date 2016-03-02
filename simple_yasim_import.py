@@ -959,17 +959,19 @@ class Wing(Item, Symetric):
         self.tip = tip
         self.wing_obj = wing_obj
         self.mesh_matrix = m
+        self.taper = taper
         
     def add_flap(self, name, start, end):
         # read in the vars from wing
         a = self.baseaft
         b = self.tipaft
-        c = 0.15 * (self.base - a)
+        c = 0.25 * (self.base - a) * (1 - (start * (1 - self.taper)))
+        d = 0.25 * (self.base - a) * (1 - (end * (1 - self.taper)))
         
         i0 = a + start * (b - a)
         i1 = a + end * (b - a)
         
-        flap_obj = mesh_create(name, ORIGIN, [i0, i1, (i0 + c), (i1 + c)], [], [(0, 1, 3, 2)])
+        flap_obj = mesh_create(name, ORIGIN, [i0, i1, (i0 + c), (i1 + d)], [], [(0, 1, 3, 2)])
         
         # get the wing obj matrix
         m = self.wing_obj.matrix_world
@@ -994,12 +996,13 @@ class Wing(Item, Symetric):
         # read in the vars from wing
         a = self.basefore
         b = self.tipfore
-        c = 0.15 * (self.base - a)
+        c = 0.25 * (self.base - a) * (1 - (start * (1 - self.taper)))
+        d = 0.25 * (self.base - a) * (1 - (end * (1 - self.taper)))
         
         i0 = a + start * (b - a)
         i1 = a + end * (b - a)
         
-        slat_obj = mesh_create(name, ORIGIN, [i0, i1, (i0 + c), (i1 + c)], [], [(0, 1, 3, 2)])
+        slat_obj = mesh_create(name, ORIGIN, [i0, i1, (i0 + c), (i1 + d)], [], [(0, 1, 3, 2)])
         
         # get the wing obj matrix
         m = self.wing_obj.matrix_world
@@ -1024,12 +1027,13 @@ class Wing(Item, Symetric):
         # read in the vars from wing
         a = self.base
         b = self.tip
-        c = 0.15 * (self.baseaft - a)
+        c = 0.25 * (self.baseaft - a) * (1 - (start * (1 - self.taper)))
+        d = 0.25 * (self.baseaft - a) * (1 - (end * (1 - self.taper)))
         
         i0 = a + start * (b - a)
         i1 = a + end * (b - a)
         
-        spoiler_obj = mesh_create(name, ORIGIN, [i0, i1, (i0 + c), (i1 + c)], [], [(0, 1, 3, 2)])
+        spoiler_obj = mesh_create(name, ORIGIN, [i0, i1, (i0 + c), (i1 + d)], [], [(0, 1, 3, 2)])
         
         # get the wing obj matrix
         m = self.wing_obj.matrix_world
