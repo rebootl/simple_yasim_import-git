@@ -4,6 +4,8 @@
 Loads and visualizes YASim FMD geometry.
 '''
 #--------------------------------------------------------------------------------
+# Update to Blender 2.80: enrogue@gmail.com
+#--------------------------------------------------------------------------------
 # Port for Blender 2.5/6/7:
 #
 # Copyright 2012-2015 Cem Aydin
@@ -36,8 +38,8 @@ Loads and visualizes YASim FMD geometry.
 bl_info = {
     'name': 'Simple YASim XML Import',
     'author': 'Cem Aydin',
-    'version': (0, 6, 1),
-    'blender': (2, 76, 0),
+    'version': (0, 6, 2),
+    'blender': (2, 80, 0),
     'api': 'unknown',
     "location": "View3D > UI panel > YASim XML Importer",
     'description': 'Loads and visualizes YASim FDM geometry',
@@ -89,7 +91,7 @@ def change_csys():
             matrix_current = bpy.data.objects[name].matrix_world
             
             # set the new matrix which is the current times the csys matrix !
-            bpy.data.objects[name].matrix_world = MATRIX_FGCSYS * matrix_current
+            bpy.data.objects[name].matrix_world = MATRIX_FGCSYS @ matrix_current
             
 
 ### Show / Clear item names            
@@ -166,15 +168,18 @@ def mirror_sym(obj_list):
         object.location = (0,0,0)
         
         # set object active
-        bpy.context.scene.objects.active = object
+        bpy.context.view_layer.objects.active = object
         
         # add mirror modifier
         bpy.ops.object.modifier_add(type='MIRROR')
         
         # set the correct axis
-        object.modifiers['Mirror'].use_x = False
-        object.modifiers['Mirror'].use_y = True
-        object.modifiers['Mirror'].use_z = False
+        #object.modifiers['Mirror'].use_x = False
+        #object.modifiers['Mirror'].use_y = True
+        #object.modifiers['Mirror'].use_z = False
+        object.modifiers['Mirror'].use_axis = (False,True,False)
+
+
         
 
 def unmirror_sym(obj_list):
@@ -186,7 +191,7 @@ def unmirror_sym(obj_list):
         
         # remove the mirror modifier
         # set object active
-        bpy.context.scene.objects.active = object
+        bpy.context.view_layer.objects.active = object
         
         bpy.ops.object.modifier_remove(modifier='Mirror')
         
@@ -249,7 +254,7 @@ Returns the mesh object.'''
     #object.location = obj_loc
     
     # link the object to the actual scene
-    bpy.context.scene.objects.link(object)
+    bpy.context.scene.collection.objects.link(object)
     
     # create the mesh with the above definitions
     mesh.from_pydata(verts, edges, faces)
@@ -279,7 +284,7 @@ Returns it.'''
     #object.location = obj_loc
     
     # link the object to the actual scene
-    bpy.context.scene.objects.link(object)
+    bpy.context.scene.collection.objects.link(object)
     
     # moving it by a matrix instead with obj.location
     object.matrix_world = Matrix.Translation(obj_loc)
@@ -324,7 +329,7 @@ def draw_arrow(mesh, start, end):
     bm.edges.new([bm.verts[n + 1], bm.verts[n + 3]])
     bm.edges.new([bm.verts[n + 4], bm.verts[n + 5]])
     
-    bm.transform(Matrix.Translation(start) * m)
+    bm.transform(Matrix.Translation(start) @ m)
     
     # add the existing mesh
     bm.from_mesh(mesh)
@@ -346,7 +351,7 @@ def draw_circle(mesh, numpoints, radius, matrix):
     for i in range(numpoints):
         angle = 2.0 * math.pi * i / numpoints
         v = Vector((radius * math.cos(angle), radius * math.sin(angle), 0))
-        bm.verts.new((v * matrix))
+        bm.verts.new((v @ matrix))
 
     # use before accessing bm.verts[] with blender 2.73
     if hasattr(bm.verts, "ensure_lookup_table"):
@@ -396,8 +401,8 @@ def draw_dashed_line(mesh, start, end):
 # Class for all items
 class Item():
     
-    # Materials attrs: Name, colorsRGB, alpha value
-    def set_material(name, color, alpha):
+    # Materials attrs: Name, colorsRGBA
+    def set_material(name, color):
         # Check if material exists already (otherwise we get dozends of materials
         #  when reloading, which is just not very nice)
         if bpy.data.materials.find(name) != -1:
@@ -408,8 +413,7 @@ class Item():
         else:
             mat = bpy.data.materials.new(name)
             mat.diffuse_color = color
-            mat.alpha = alpha
-            mat.use_transparency = True
+            mat.use_sss_translucency = True
             
             bpy.context.object.data.materials.append(mat)
         
@@ -446,8 +450,8 @@ class Cockpit(Item):
         # name it appropriately
         # (give name here, there is only ONE cockpit element !)
         bpy.context.object.name = 'YASim_Cockpit'
-        # set material, attr: Name, colorsRGB, alpha value
-        Item.set_material('red', (1,0,0), 1)
+        # set material, attr: Name, colorsRGBA
+        Item.set_material('red', (1,0,0,1))
         
 
 class Tank(Item):
@@ -465,7 +469,7 @@ class Tank(Item):
         bpy.context.object.name = name
         
         # set material
-        Item.set_material('blue', (0,0,1), 1)
+        Item.set_material('blue', (0,0,1,1))
         
 
 class Ballast(Item):
@@ -484,7 +488,7 @@ class Ballast(Item):
         bpy.context.object.name = name
         
         # set material
-        Item.set_material('grey', (0.8,0.8,0.8), 1)
+        Item.set_material('grey', (0.8,0.8,0.8,1))
         
 
 class Weight(Item):
@@ -501,7 +505,7 @@ class Weight(Item):
         bpy.context.object.name = name
         
         # set material
-        Item.set_material('pink', (0.8, 0.0, 0.8), 1)
+        Item.set_material('pink', (0.8, 0.0, 0.8,1))
         
 
 class Gear(Item):
@@ -515,9 +519,9 @@ class Gear(Item):
         gear_obj = mesh_create(name, center, verts, edge, [])
         
         # set the created object active !!!!!!!
-        bpy.context.scene.objects.active = gear_obj
+        bpy.context.view_layer.objects.active = gear_obj
         # set material
-        Item.set_material('grey2', (0.3,0.3,0.3), 1)
+        Item.set_material('grey2', (0.3,0.3,0.3,1))
         
 
 class Hook(Item):
@@ -534,7 +538,7 @@ class Hook(Item):
         hook_obj = mesh_create(name, center, [ORIGIN, dn, dn + 0.05*Y, dn - 0.05*Y], [(0,1), (2,3)], [])
         
         # set the created object active !!!!!!!
-        bpy.context.scene.objects.active = hook_obj
+        bpy.context.view_layer.objects.active = hook_obj
         
         # now draw the dashed line for retr./up position
         # get the active mesh
@@ -542,7 +546,7 @@ class Hook(Item):
         draw_dashed_line(mesh, ORIGIN, up)
         
         # set material
-        Item.set_material('grey2', (0.3,0.3,0.3), 1)
+        Item.set_material('grey2', (0.3,0.3,0.3,1))
         
 
 class Launchbar(Item):
@@ -566,7 +570,7 @@ class Launchbar(Item):
                                     [(0,1),(0,2),(2,3),(4,5),(6,7)], [])
         
         # set the created object active !!!!!!!
-        bpy.context.scene.objects.active = lb_obj
+        bpy.context.view_layer.objects.active = lb_obj
         
         # draw dashed lines for the retracted position
         # get the active mesh
@@ -579,7 +583,7 @@ class Launchbar(Item):
         draw_dashed_line(mesh, hb, hb_up)
         
         # set material
-        Item.set_material('grey2', (0.3,0.3,0.3), 1)
+        Item.set_material('grey2', (0.3,0.3,0.3,1))
         
 
 class Hitch(Item):
@@ -593,8 +597,8 @@ class Hitch(Item):
         
         # name it appropriately
         bpy.context.object.name = name
-        # set material, attr: Name, colorsRGB, alpha value
-        Item.set_material('grey2', (0.3,0.3,0.3), 1)
+        # set material, attr: Name, colorsRGBA
+        Item.set_material('grey2', (0.3,0.3,0.3,1))
         
 
 class Thruster(Item):
@@ -603,7 +607,7 @@ class Thruster(Item):
         empty_obj = mesh_create_empty(name, center)
         
         # set the created object active !!!!!!!
-        bpy.context.scene.objects.active = empty_obj
+        bpy.context.view_layer.objects.active = empty_obj
         # get the active mesh
         mesh = bpy.context.object.data
         
@@ -617,8 +621,8 @@ class Thruster(Item):
         
         draw_arrow(mesh, ORIGIN, thrustvector.normalized())
         
-        # set material, attr: Name, colorsRGB, alpha value
-        Item.set_material('grey3', (0.3,0.3,0.3), 1)
+        # set material, attr: Name, colorsRGBA
+        Item.set_material('grey3', (0.3,0.3,0.3,1))
         
         # moving it to it's location by matrix instead locate above empty_obj
 
@@ -652,13 +656,13 @@ class Jet(Item, Thrust):
         # create the thrustvector
         # couldn't find a degtorad transformation in the orig. script for rotate
         # I think it should be done
-        thrustvector = -X * Matrix.Rotation(math.radians(rotate), 4, 'Y')
+        thrustvector = -X @ Matrix.Rotation(math.radians(rotate), 4, 'Y')
         
         # create an empty mesh object at center
         empty_obj = mesh_create_empty(name, center)
         
         # set the created object active !!!!!!!
-        bpy.context.scene.objects.active = empty_obj
+        bpy.context.view_layer.objects.active = empty_obj
         # get the active mesh
         mesh = bpy.context.object.data
         
@@ -671,7 +675,7 @@ class Jet(Item, Thrust):
         Thrust.set_center(center)
         
         # show name and set material
-        Item.set_material('grey3', (0.3,0.3,0.3), 1)
+        Item.set_material('grey3', (0.3,0.3,0.3,1))
         
 
 class Propeller(Item, Thrust):
@@ -682,7 +686,7 @@ class Propeller(Item, Thrust):
         prop_obj = mesh_create(name, center, [ORIGIN, (ORIGIN + radius * Z)], [(0,1)], [])
         
         # set the created object active !!!!!!!
-        bpy.context.scene.objects.active = prop_obj
+        bpy.context.view_layer.objects.active = prop_obj
         # get the active mesh
         mesh = bpy.context.object.data
         
@@ -705,7 +709,7 @@ class Propeller(Item, Thrust):
         Thrust.set_center(center)
         
         # show name and set material
-        Item.set_material('grey3', (0.3,0.3,0.3), 1)
+        Item.set_material('grey3', (0.3,0.3,0.3,1))
         
 
 # this one simply needs to be called after the jet/propeller
@@ -716,7 +720,7 @@ class ActionPt(Thrust):
         obj = Thrust.obj_name
         
         # set the created object active !!!!!!! ==> maybe there's a better way to do this ?
-        bpy.context.scene.objects.active = obj
+        bpy.context.view_layer.objects.active = obj
         # get the active mesh
         mesh = bpy.context.object.data
         
@@ -793,13 +797,13 @@ class Fuselage(Item):
         fus_obj.location = a
         
         # link the object to the actual scene
-        bpy.context.scene.objects.link(fus_obj)
+        bpy.context.scene.collection.objects.link(fus_obj)
         
         # set the created object active !!!!!!!
-        bpy.context.scene.objects.active = fus_obj
+        bpy.context.view_layer.objects.active = fus_obj
         
         # give this one a nice material:
-        Item.set_material('tblue-1', (0.0,0.0,0.5), 0.4)
+        Item.set_material('tblue-1', (0.0,0.0,0.5,0.4))
         
 
 class Rotor(Item):
@@ -877,9 +881,9 @@ class Rotor(Item):
         draw_arrow(mesh, ORIGIN, fwd)
         
         # set the created object active !!!!!!!
-        bpy.context.scene.objects.active = rot_obj
+        bpy.context.view_layer.objects.active = rot_obj
         # set material
-        Item.set_material('grey4', (0.3,0.3,0.3), 1)
+        Item.set_material('grey4', (0.3,0.3,0.3,1))
         
 
 # finally, the wings
@@ -922,7 +926,7 @@ class Wing(Item, Symetric):
         
         # now transform the mesh
         # set the created object active !!!!!!!
-        bpy.context.scene.objects.active = wing_obj
+        bpy.context.view_layer.objects.active = wing_obj
         # get the active mesh
         mesh = bpy.context.object.data
         
@@ -943,30 +947,35 @@ class Wing(Item, Symetric):
         
         # assign materials
         if self.is_symetric:
-            Item.set_material('tgreen-1', (0.0,0.5,0.0), 0.5)
+            Item.set_material('tgreen-1', (0.0,0.5,0.0,0.5))
             
             Symetric.list_append(wing_obj)
         
         else:
-            Item.set_material('tred-1', (0.5,0.0,0.0), 0.5)
+            Item.set_material('tred-1', (0.5,0.0,0.0,0.5))
         
         # write out the vars for the flaps
         self.baseaft = baseaft
+        self.basefore = basefore
         self.tipaft = tipaft
+        self.tipfore = tipfore
         self.base = base
+        self.tip = tip
         self.wing_obj = wing_obj
         self.mesh_matrix = m
+        self.taper = taper
         
     def add_flap(self, name, start, end):
         # read in the vars from wing
         a = self.baseaft
         b = self.tipaft
-        c = 0.2 * (self.base - a).normalized()
+        c = 0.25 * (self.base - a) * (1 - (start * (1 - self.taper)))
+        d = 0.25 * (self.base - a) * (1 - (end * (1 - self.taper)))
         
         i0 = a + start * (b - a)
         i1 = a + end * (b - a)
         
-        flap_obj = mesh_create(name, ORIGIN, [i0, i1, (i0 + c), (i1 + c)], [], [(0, 1, 3, 2)])
+        flap_obj = mesh_create(name, ORIGIN, [i0, i1, (i0 + c), (i1 + d)], [], [(0, 1, 3, 2)])
         
         # get the wing obj matrix
         m = self.wing_obj.matrix_world
@@ -979,16 +988,75 @@ class Wing(Item, Symetric):
         flap_obj.matrix_world = m
         
         # set the created object active !!!!!!!
-        bpy.context.scene.objects.active = flap_obj
+        bpy.context.view_layer.objects.active = flap_obj
         
         # set material
-        Item.set_material('tyello-1', (0.8,0.8,0.0), 0.9)
+        Item.set_material('tyello-1', (0.8,0.8,0.0,0.9))
         
         if self.is_symetric:
             Symetric.list_append(flap_obj)
+
+    def add_slat(self, name, start, end):
+        # read in the vars from wing
+        a = self.basefore
+        b = self.tipfore
+        c = 0.25 * (self.base - a) * (1 - (start * (1 - self.taper)))
+        d = 0.25 * (self.base - a) * (1 - (end * (1 - self.taper)))
         
+        i0 = a + start * (b - a)
+        i1 = a + end * (b - a)
+        
+        slat_obj = mesh_create(name, ORIGIN, [i0, i1, (i0 + c), (i1 + d)], [], [(0, 1, 3, 2)])
+        
+        # get the wing obj matrix
+        m = self.wing_obj.matrix_world
+        
+        # apply it to the slat_obj + the "wing mesh matrix" from above to get the rotations
+        # separating mesh matrix out, getting incorrect mirrors
+        mesh = slat_obj.data
+        mesh.transform(self.mesh_matrix)
+        
+        slat_obj.matrix_world = m
+        
+        # set the created object active !!!!!!!
+        bpy.context.view_layer.objects.active = slat_obj
+        
+        # set material
+        Item.set_material('tyello-1', (0.8,0.8,0.0,0.9))
+        
+        if self.is_symetric:
+            Symetric.list_append(slat_obj)
 
-
+    def add_spoiler(self, name, start, end):
+        # read in the vars from wing
+        a = self.base
+        b = self.tip
+        c = 0.25 * (self.baseaft - a) * (1 - (start * (1 - self.taper)))
+        d = 0.25 * (self.baseaft - a) * (1 - (end * (1 - self.taper)))
+        
+        i0 = a + start * (b - a)
+        i1 = a + end * (b - a)
+        
+        spoiler_obj = mesh_create(name, ORIGIN, [i0, i1, (i0 + c), (i1 + d)], [], [(0, 1, 3, 2)])
+        
+        # get the wing obj matrix
+        m = self.wing_obj.matrix_world
+        
+        # apply it to the spoiler_obj + the "wing mesh matrix" from above to get the rotations
+        # separating mesh matrix out, getting incorrect mirrors
+        mesh = spoiler_obj.data
+        mesh.transform(self.mesh_matrix)
+        
+        spoiler_obj.matrix_world = m
+        
+        # set the created object active !!!!!!!
+        bpy.context.view_layer.objects.active = spoiler_obj
+        
+        # set material
+        Item.set_material('tyello-1', (0.8,0.8,0.0,0.9))
+        
+        if self.is_symetric:
+            Symetric.list_append(spoiler_obj)
 
 ### This is the parser handling function
 ### It tells the parser what to do with the XML
@@ -1152,10 +1220,20 @@ class Read_XML(handler.ContentHandler):
             
             item = Wing("YASim_{:s}_{:d}".format(name, self.counter[name]), root, length, chord, incidence, twist, taper, sweep, dihedral)
             
-        elif name == "flap0" or name == "flap1" or name == "slat" or name == "spoiler":
+        elif name == "flap0" or name == "flap1":
             start = float(attrs.get("start"))
             end = float(attrs.get("end"))
             parent.add_flap("YASim_{:s}_{:d}".format(name, self.counter[name]), start, end)
+        
+        elif name == "slat":
+            start = float(attrs.get("start"))
+            end = float(attrs.get("end"))
+            parent.add_slat("YASim_{:s}_{:d}".format(name, self.counter[name]), start, end)
+        
+        elif name == "spoiler":
+            start = float(attrs.get("start"))
+            end = float(attrs.get("end"))
+            parent.add_spoiler("YASim_{:s}_{:d}".format(name, self.counter[name]), start, end)
         
         
         # appending item to list
@@ -1201,10 +1279,12 @@ def load_XML(filepath):
 ###  is used, later, we may want it in the menu File --> Import
 ## UI PANEL
 
-class UIPanel(bpy.types.Panel):
+class PANEL_PT_UIPanel(bpy.types.Panel):
+    bl_idname = "PANEL_PT_UIPanel"
     bl_label = "YASim XML Importer"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
+    bl_category = "YASim"
  
     def draw(self, context):
         layout = self.layout
@@ -1257,9 +1337,9 @@ class OBJECT_OT_LoadXmlButton(bpy.types.Operator, ImportHelper):
     bl_label = "Load (.xml)"
     
     filename_ext = ".xml"
-    filter_glob = bpy.props.StringProperty(default="*.xml", options={'HIDDEN'})
+    filter_glob: bpy.props.StringProperty(default="*.xml", options={'HIDDEN'})
     
-    filepath = bpy.props.StringProperty(name="File Path", maxlen=1024, default="")
+    filepath: bpy.props.StringProperty(name="File Path", maxlen=1024, default="")
     
     def execute(self, context):
         
@@ -1319,7 +1399,7 @@ def mirror_update(self, context):
 mirror_prop_items = [ ("0", "Mirror", "Mirror on. Object centers are moved to blender origin (0,0,0) !"), 
                         ("1", "One-sided", "Mirror off. Object centers are restored to the YASim xyz position.") ]
 
-bpy.types.Scene.mirror = EnumProperty(name="Mirror", description="Mirror the symetrical elements.",
+bpy.types.Scene.mirror = EnumProperty(name="Mirror", description="Mirror the symetrical elements",
                                             default="1", items=mirror_prop_items, update=mirror_update)
 
 # boolean controller property
@@ -1346,7 +1426,7 @@ def update_csys(self, context):
 csys_prop_items = [ ("0", "FG", "Use the standard FlightGear coordinate system."), 
                         ("1", "YASim", "Use YASim's internal coordinate system.") ]
 
-bpy.types.Scene.csys = EnumProperty(name="CSys", description="Coordinate System to use.",
+bpy.types.Scene.csys = EnumProperty(name="CSys", description="Coordinate System to use",
                                             default="0", items=csys_prop_items, update=update_csys)
 
 # boolean controller property
@@ -1365,7 +1445,7 @@ def show_names_update(self, context):
         clear_item_names()
     
 
-bpy.types.Scene.show_names = BoolProperty(name="Show Item Names", description="Show YASim_* item names in the viewport.",
+bpy.types.Scene.show_names = BoolProperty(name="Show Item Names", description="Show YASim_* item names in the viewport",
                                             default=True, update=show_names_update)
 
 
@@ -1378,18 +1458,35 @@ def lock_transformations_update(self, context):
     elif setting == False:
         lock_transformations(False)
 
-bpy.types.Scene.lock_transformations = BoolProperty(name="Lock Location/Rotation", description="Lock YASim_* item tranformations.",
+bpy.types.Scene.lock_transformations = BoolProperty(name="Lock Location/Rotation", description="Lock YASim_* item tranformations",
                                                     default=True, update=lock_transformations_update)
 
 
 ### Registration (necessary to show up buttons etc.)
 # (From blender cookbook)
 
-def register():
-    bpy.utils.register_module(__name__)
+#def register():
+#    bpy.utils.register_module(__name__)
  
+#def unregister():
+#    bpy.utils.unregister_module(__name__)
+
+classes = (
+    PANEL_PT_UIPanel,
+    OBJECT_OT_ReloadButton,
+    OBJECT_OT_LoadXmlButton,
+    OBJECT_OT_ClearYASimButton,
+)
+
+def register():
+    from bpy.utils import register_class
+    for cls in classes:
+        register_class(cls)
+
 def unregister():
-    bpy.utils.unregister_module(__name__)
+    from bpy.utils import unregister_class
+    for cls in reversed(classes):
+        unregister_class(cls)
  
 if __name__ == "__main__":
     register()
