@@ -794,7 +794,7 @@ class Fuselage(Item):
         # set the object location, where to place this ? It's placed at point ax,ay,az !
         #  I'm assuming this is always the tip of the tube, otherways it might not be displayed correctly ?
         #  ==> maybe find a solution for this... ?
-        fus_obj.location = a
+        fus_obj.matrix_world = Matrix.Translation(a)
         
         # link the object to the actual scene
         bpy.context.scene.collection.objects.link(fus_obj)
