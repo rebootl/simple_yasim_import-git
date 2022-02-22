@@ -38,8 +38,8 @@ Loads and visualizes YASim FMD geometry.
 bl_info = {
     'name': 'Simple YASim XML Import',
     'author': 'Cem Aydin',
-    'version': (0, 6, 2),
-    'blender': (2, 80, 0),
+    'version': (0, 7, 1),
+    'blender': (3, 0, 1),
     'api': 'unknown',
     "location": "View3D > UI panel > YASim XML Importer",
     'description': 'Loads and visualizes YASim FDM geometry',
